@@ -1568,8 +1568,6 @@ dependencies = [
 [[package]]
 name = "pgrx"
 version = "0.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06eb76205437c489284e76c3910c81378d525e3e7e8364c31875ec105cc63cd1"
 dependencies = [
  "bitflags",
  "bitvec",

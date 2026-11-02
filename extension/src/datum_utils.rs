@@ -43,6 +43,17 @@ pub(crate) unsafe fn free_datum(datum: Datum, typoid: Oid) {
 
 // TODO: is there a better place for this?
 // Note that this requires an reference time to deal with variable length intervals (days or months)
+/// The value of an 8-byte type that Postgres passes by value on 64-bit platforms (int8,
+/// timestamptz, ...). With 4-byte Datums (32-bit platforms such as wasm32) it is passed by
+/// reference.
+pub fn int64_from_datum(datum: Datum) -> i64 {
+    if size_of::<i64>() <= size_of::<Datum>() {
+        datum.value() as i64
+    } else {
+        unsafe { pg_sys::DatumGetInt64(datum) }
+    }
+}
+
 pub fn ts_interval_sum_to_ms(
     ref_time: &crate::raw::TimestampTz,
     interval: &crate::raw::Interval,
@@ -59,11 +70,11 @@ pub fn ts_interval_sum_to_ms(
             interval.0,
         )
     };
-    bound.value() as i64
+    int64_from_datum(bound)
 }
 
 pub fn interval_to_ms(ref_time: &crate::raw::TimestampTz, interval: &crate::raw::Interval) -> i64 {
-    ts_interval_sum_to_ms(ref_time, interval) - ref_time.0.value() as i64
+    ts_interval_sum_to_ms(ref_time, interval) - int64_from_datum(ref_time.0)
 }
 
 pub struct TextSerializableDatumWriter {
@@ -210,10 +221,10 @@ impl Hasher for DatumHashBuilder {
                 isnull: true,
             };
             (*self.info).isnull = false;
-            //FIXME 32bit vs 64 bit get value from datum on 32b arch
             value
         };
-        value.value() as u64
+        // the extended hash functions return int8
+        int64_from_datum(value) as u64
     }
 
     fn write(&mut self, bytes: &[u8]) {

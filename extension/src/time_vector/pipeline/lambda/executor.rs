@@ -257,15 +257,14 @@ where
                 let left = self.exec_expression(left, value, time).time();
                 let right = self.exec_expression(right, value, time).interval();
 
-                let res: i64 = unsafe {
+                let res: i64 = crate::datum_utils::int64_from_datum(unsafe {
                     pg_sys::DirectFunctionCall2Coll(
                         Some($calc),
                         pg_sys::InvalidOid,
                         pg_sys::Datum::from(left),
                         pg_sys::Datum::from(right),
                     )
-                    .value() as _
-                };
+                });
 
                 Value::Time(res)
             }};

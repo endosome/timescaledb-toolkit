@@ -7,3 +7,5 @@
 *.iml
 /target-analyzer
 /.editorconfig
+/target-wasm
+/target-pglite

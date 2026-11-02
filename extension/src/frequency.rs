@@ -523,7 +523,7 @@ impl<'input> From<&SpaceSavingTransState> for SpaceSavingBigIntAggregate<'input>
         let mut overcounts = Vec::new();
 
         for entry in &trans.entries {
-            values.push(entry.value.value() as i64);
+            values.push(crate::datum_utils::int64_from_datum(entry.value));
             counts.push(entry.count);
             overcounts.push(entry.overcount);
         }
