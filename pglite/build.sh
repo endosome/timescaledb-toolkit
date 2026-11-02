@@ -1,19 +1,23 @@
 #!/bin/bash
 # Builds timescaledb_toolkit as a PGlite side module and packages it as a PGlite extension bundle.
-# Runs in the image from pglite/Dockerfile, with this repository at /src, PGlite's build output
-# (postgres-pglite/dist) at /pglite, and the SQL from pglite/schema.sh at /src/target-pglite/sql.
+# Runs in an image built from pglite/Dockerfile. Paths, with their defaults:
+#   SRC     this repository (/src)
+#   PGLITE  PGlite's build output, postgres-pglite/dist (/pglite)
+#   OUT     where the outputs go ($SRC/target-pglite)
 #
-# Output in /src/target-pglite:
+# Outputs in $OUT:
 #   timescaledb_toolkit.tar.gz    the extension bundle
 #   timescaledb_toolkit.imports   symbols PGlite has to export, for PGlite's own build
 set -euo pipefail
-export HOME=/tmp/home && mkdir -p $HOME
-OUT=/src/target-pglite
+SRC=${SRC:-/src}
+PGLITE=${PGLITE:-/pglite}
+OUT=${OUT:-$SRC/target-pglite}
+export HOME=${HOME:-/tmp/home} && mkdir -p $HOME
 export CARGO_TARGET_DIR=$OUT/cargo
-VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' /src/extension/Cargo.toml | head -1)
+VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' $SRC/extension/Cargo.toml | head -1)
 
 # pgrx reads PostgreSQL's build configuration from PGlite's pg_config
-export PGRX_PG_CONFIG_PATH=/pglite/bin/pg_config
+export PGRX_PG_CONFIG_PATH=$PGLITE/bin/pg_config
 export PGRX_HOME=$HOME/.pgrx
 
 # pgrx's C shim is compiled like PGlite's own extensions: PIC, and PGlite's setjmp/longjmp
@@ -32,19 +36,20 @@ export BINDGEN_EXTRA_CLANG_ARGS_wasm32_unknown_emscripten="--sysroot=$SYSROOT -i
 export RUSTFLAGS="-C relocation-model=pic -C debuginfo=0 -C strip=debuginfo \
   -C link-arg=-lunwind-wasmexcept -C link-arg=-lc++abi-wasmexcept -C link-arg=-sSIDE_MODULE=1"
 
-cd /src/extension
+cd $SRC/extension
 cargo build --release --target wasm32-unknown-emscripten --no-default-features --features pg18
 WASM=$CARGO_TARGET_DIR/wasm32-unknown-emscripten/release/timescaledb_toolkit.wasm
 
-# the bundle: library, control file and install script, laid out like PGlite's other bundles
+# the bundle: library, control file and install script (pglite/timescaledb_toolkit.sql, see
+# schema.sh), laid out like PGlite's other bundles
 STAGE=$OUT/stage && rm -rf $STAGE && mkdir -p $STAGE/lib/postgresql $STAGE/share/postgresql/extension
 cp $WASM $STAGE/lib/postgresql/timescaledb_toolkit-$VERSION.so
 sed -e "s/@CARGO_VERSION@/$VERSION/" -e "s|^module_pathname = .*|module_pathname = '\$libdir/timescaledb_toolkit-$VERSION'|" \
   timescaledb_toolkit.control > $STAGE/share/postgresql/extension/timescaledb_toolkit.control
-cp $OUT/sql/timescaledb_toolkit.sql $STAGE/share/postgresql/extension/timescaledb_toolkit--$VERSION.sql
+cp $SRC/pglite/timescaledb_toolkit.sql $STAGE/share/postgresql/extension/timescaledb_toolkit--$VERSION.sql
 (cd $STAGE && tar -czf $OUT/timescaledb_toolkit.tar.gz $(find . -type f | sed 's|^\./||'))
 
 # what PGlite has to export for this module: its function imports and the GOT entries it does not
 # define itself, without emscripten's runtime functions and Rust's own symbols
-python3 /src/pglite/wasm_imports.py $WASM | grep -v -E '^(invoke_|__|_R[A-Za-z0-9_]+$)' > $OUT/timescaledb_toolkit.imports
+python3 $SRC/pglite/wasm_imports.py $WASM | grep -v -E '^(invoke_|__|_R[A-Za-z0-9_]+$)' > $OUT/timescaledb_toolkit.imports
 echo "built $OUT/timescaledb_toolkit.tar.gz (timescaledb_toolkit $VERSION)"

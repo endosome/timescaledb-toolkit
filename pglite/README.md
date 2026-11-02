@@ -10,16 +10,22 @@ Needs Docker and PGlite's build output, `postgres-pglite/dist`, from a PGlite bu
 ```bash
 docker build -t pglite-rust-builder pglite
 
-# the SQL install script, from a native build against PostgreSQL 18
-mkdir -p target-pglite/sql
-docker run --rm -v "$PWD:/src:ro" -v "$PWD/target-pglite/sql:/src-out" postgres:18 bash /src/pglite/schema.sh
-
 # the side module and the bundle
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" -v /path/to/postgres-pglite/dist:/pglite:ro \
   pglite-rust-builder bash /src/pglite/build.sh
 ```
 
-This writes `target-pglite/timescaledb_toolkit.tar.gz`, the bundle to load as a PGlite extension, and
+PGlite's build (postgres-pglite) runs `build.sh` itself, with this repository as a submodule.
+
+The bundle's SQL install script is `pglite/timescaledb_toolkit.sql`, generated with a native build against
+PostgreSQL 18, since PGlite's builder has no native PostgreSQL. Regenerate and commit it when the extension's SQL
+changes:
+
+```bash
+docker run --rm -v "$PWD:/src" postgres:18 bash /src/pglite/schema.sh
+```
+
+The build writes `target-pglite/timescaledb_toolkit.tar.gz`, the bundle to load as a PGlite extension, and
 `target-pglite/timescaledb_toolkit.imports`. PGlite exports only the PostgreSQL and libc symbols its extensions
 use: PGlite's build has to include this file in its extension imports
 (`dist/include/postgresql/emscripten/extension/imports/`) before it links PGlite.

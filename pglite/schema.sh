@@ -1,7 +1,8 @@
 #!/bin/bash
 # Generates the extension's SQL install script with a native build against PostgreSQL 18; the SQL
 # does not depend on the target the library is built for. Runs in postgres:18 with this
-# repository at /src (read-only) and writes /src-out/timescaledb_toolkit.sql.
+# repository at /src and writes /src/pglite/timescaledb_toolkit.sql, which pglite/build.sh puts in
+# the bundle. Run it again and commit the result when the extension's SQL changes.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq >/dev/null
@@ -15,4 +16,4 @@ PG_CONFIG=/usr/lib/postgresql/18/bin/pg_config
 export CARGO_TARGET_DIR=/tmp/target-native PGRX_HOME=/tmp/pgrx-home
 mkdir -p $PGRX_HOME && printf '[configs]\npg18 = "%s"\n' $PG_CONFIG > $PGRX_HOME/config.toml
 cp -a /src /tmp/src && cd /tmp/src/extension
-cargo pgrx schema --no-default-features --features pg18 --pg-config $PG_CONFIG -o /src-out/timescaledb_toolkit.sql
+cargo pgrx schema --no-default-features --features pg18 --pg-config $PG_CONFIG -o /src/pglite/timescaledb_toolkit.sql
