@@ -36,6 +36,10 @@ export BINDGEN_EXTRA_CLANG_ARGS_wasm32_unknown_emscripten="--sysroot=$SYSROOT -i
 export RUSTFLAGS="-C relocation-model=pic -C debuginfo=0 -C strip=debuginfo \
   -C link-arg=-lunwind-wasmexcept -C link-arg=-lc++abi-wasmexcept -C link-arg=-sSIDE_MODULE=1"
 
+# the unwinder and exception tag the module links (see Dockerfile); built again in case
+# emscripten's cache was cleared, as PGlite's build does
+embuilder --pic build libunwind-wasmexcept libc++abi-wasmexcept > /dev/null
+
 cd $SRC/extension
 cargo build --release --target wasm32-unknown-emscripten --no-default-features --features pg18
 WASM=$CARGO_TARGET_DIR/wasm32-unknown-emscripten/release/timescaledb_toolkit.wasm
