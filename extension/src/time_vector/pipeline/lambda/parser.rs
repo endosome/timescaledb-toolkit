@@ -384,7 +384,7 @@ fn parse_timestamptz(val: &str) -> i64 {
             pg_sys::Datum::from(-1i32),
         )
     };
-    parsed_time.value() as _
+    crate::datum_utils::int64_from_datum(parsed_time)
 }
 
 fn parse_interval(val: &str) -> *mut pg_sys::Interval {

@@ -122,7 +122,7 @@ pub fn accessor_live_at(ts: crate::raw::TimestampTz) -> AccessorLiveAt {
     unsafe {
         flatten! {
             AccessorLiveAt {
-                time: ts.0.value() as u64,
+                time: crate::datum_utils::int64_from_datum(ts.0) as u64,
             }
         }
     }

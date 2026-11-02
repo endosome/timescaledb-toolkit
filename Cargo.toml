@@ -13,3 +13,8 @@ members = [
 lto = "fat"
 debug = true
 codegen-units = 1
+
+# pgrx with fixes for 32-bit platforms (PGlite's wasm32), where 8-byte types are passed by
+# reference; see vendor/pgrx
+[patch.crates-io]
+pgrx = { path = "vendor/pgrx" }

@@ -126,7 +126,7 @@ unsafe impl pgrx::callconv::BoxRet for TimestampTz {
 
 impl From<TimestampTz> for pg_sys::TimestampTz {
     fn from(tstz: TimestampTz) -> Self {
-        tstz.0.value() as _
+        crate::datum_utils::int64_from_datum(tstz.0)
     }
 }
 
